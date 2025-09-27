@@ -38,7 +38,7 @@ CAPITAL - тестируемый капитал
 # # backtester.py:
 Симуляция торгов, генерация сигналов buy/sell.
 
-## utils/reporter.py, logging.py, visualizer.py
+# # utils/reporter.py, logging.py, visualizer.py
 Модули отчетов, логгирования и визуализации. 
 
 # # trader.py:
