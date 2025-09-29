@@ -74,15 +74,10 @@ python run_live.py
 - Double-check position sizing and risk controls  
 - Do not share or commit API keys  
 
----
-
-## License
-MIT License (recommended). Add `LICENSE` file if you want to open-source.  
 
 ---
 
 ## Contact
-- GitHub: [MaximSt11](https://github.com/MaximSt11/GrTr)  
 - Telegram: @maximevg  
 
 ---
