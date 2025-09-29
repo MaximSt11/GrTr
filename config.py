@@ -32,11 +32,11 @@ class Config:
     ACTIVE_STRATEGY_KEY = 'LONG' # Меняем ключ для тестирования соответствующего направления
 
     # Виды отчетов
-    ENABLE_SUMMARY_REPORT = True # Устарел, пока в режиме подтягивания к текущей версии
+    ENABLE_SUMMARY_REPORT = True
     ENABLE_MINIMAL_REPORT = True
-    ENABLE_SUCCESSFUL_TRIALS_REPORT = True # Устарел, пока в режиме подтягивания к текущей версии
-    ENABLE_TOP_5_TRIALS_REPORT = True # Устарел, пока в режиме подтягивания к текущей версии
-
+    ENABLE_SUCCESSFUL_TRIALS_REPORT = True
+    ENABLE_TOP_5_TRIALS_REPORT = True
+    
     # Ограничения
     MIN_SHARPE = 0.5
     MIN_WIN_RATE = 0.45
