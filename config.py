@@ -21,9 +21,9 @@ class Config:
     SYMBOLS = ['SOL/USDT']
 
     # Флаги модулей отчетности
-    ENABLE_REPORTER = True # Устарел, пока в режиме подтягивания к текущей версии
-    ENABLE_VISUALIZER = True # Устарел, пока в режиме подтягивания к текущей версии
-    ENABLE_OPTUNA_PLOTS = True # Устарел, пока в режиме подтягивания к текущей версии
+    ENABLE_REPORTER = True
+    ENABLE_VISUALIZER = True
+    ENABLE_OPTUNA_PLOTS = True
     ENABLE_LOGGING = True
 
     # Переключатель режимов теста
