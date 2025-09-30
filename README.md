@@ -133,7 +133,7 @@ python interactive_tester.py
 
 ---
 
-## Example Backtest Results (1080 days depth)
+## Example Backtest Results (1080 days depth/objective function - maximize Sharpe)
 
 ### Long Strategy (SOL/USDT)
 ```
@@ -307,7 +307,7 @@ python interactive_tester.py
 
 ---
 
-## Примеры результатов бэктестов (с глубиной данных в 1080 дней)
+## Примеры результатов бэктестов (с глубиной данных в 1080 дней/Целевая функция - максимизация Шарпа)
 
 ### Лонг (SOL/USDT)
 ```
