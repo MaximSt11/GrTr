@@ -5,30 +5,32 @@
 ---
 
 ## Overview
-**GrTr** is a modular algorithmic trading framework written in Python.  
-It provides tools for **data fetching, indicators, backtesting, parameter optimization (Optuna), Time Series Split validation, and live trading (Bybit)**.  
+**GrTr** is a complete ecosystem for developing, backtesting, and deploying algorithmic trading strategies in Python. It provides a modular framework for data handling, performance-accelerated backtesting, advanced optimization (Optuna), and robust live trading on the Bybit exchange.
 
 ⚠️ **Important**: This project can execute live trades. Use **testnet first** and review all code before using with real funds.
 
 ---
 
 ## Features
-- Backtesting via `main.py`
-- Live trading via `run_live.py` (Bybit)
-- Two-stage validation:  
-  1. **Optuna optimization** on parameter grid  
-  2. **Time Series Split (TSS)** for stability check of best parameters  
-- Adjustable number of folds and train/test split lengths in TSS
-- Target function in `optimizer.py` can be customized
-- Multi-strategy setup with flexible configs
-- Logging, reporting, watchdog, visualization modules
-- Production configs for long/short strategies
-
+- **High-Performance Backtesting:** The core backtesting engine is JIT-compiled with `numba` for a massive performance boost, enabling rapid and extensive optimization runs.
+- **Advanced Optuna Optimization:** Features a sophisticated objective function with multi-stage hierarchical filtering to efficiently find robust strategies.
+- **Independent Watchdog Monitor:** A separate `watchdog.py` process monitors the trader's health, parses logs for key events (entries, exits, errors), and sends detailed real-time alerts to Telegram.
+- **Multi-Strategy Architecture:** The `config.py` file acts as a strategy library, allowing you to define and switch between entirely different trading models (e.g., trend-following, scalping) by changing a single key.
+- **Detailed Trade Logging:** Automatically saves a full CSV log of all trades from the best-performing Optuna trial for in-depth analysis.
+- **Two-Stage Validation:** Employs a robust pipeline where strategies are first discovered by Optuna and then validated for stability using Time Series Split cross-validation.
+- **Live Trading Module:** A feature-rich live trader for Bybit designed for reliability and parity with the backtester.
+  
 ---
 
-## Design Philosophy
+## Core Concepts
 
-Backtest & Live Parity: A core principle of this project is to ensure that the live trading module (`trader.py`) behaves identically to the backtesting engine (`backtester.py`). Both modules share the same core logic for signal generation, risk calculation, and trade management. This minimizes discrepancies and ensures that the live performance is a true reflection of the tested strategy.
+**Design Philosophy: Backtest & Live Parity**
+
+A core principle of this project is to ensure that the live trading module (`trader.py`) behaves identically to the backtesting engine (`backtester.py`). Both modules share the same core logic for signal generation, risk calculation, and trade management. This minimizes discrepancies and ensures that the live performance is a true reflection of the tested strategy.
+
+**Default Strategy: Simple Entry, Sophisticated Management**
+
+The baseline strategy uses a dual-EMA trend-following model for entries and RSI-based signals for exits. The true edge lies in its advanced trade management logic after a position is opened. This logic is fully customizable in the `generate_signals` function to fit your own trading philosophy.
 
 ---
 
@@ -62,6 +64,10 @@ The true strength of this framework lies not just in its entry signals, but in i
 
 - Smart Cooldown: After a trade is closed (win or loss), the system activates an intelligent cooldown period for that specific trading pair. This prevents immediate re-entry into a volatile or uncertain market, helping to filter out market noise and avoid over-trading.
 
+- Dynamic Risk Governor: Automatically reduces the risk per trade based on the current drawdown from the high-water mark, protecting capital during losing streaks.
+  
+- State Reconciliation & Position Rescue: A self-healing mechanism that periodically checks for discrepancies between the bot's state and the exchange. It can "rescue" and take control of orphaned positions to prevent uncontrolled losses.
+  
 ---
 
 ## Installation
@@ -92,25 +98,31 @@ Key parameters for running strategies:
 
 ## Usage
 
-### 1. Run Backtest
-Edit `config.py` and run:
+### 1. Backtesting & Optimization
+Edit `config.py` to define your strategy and parameter grid, then run:
 ```bash
 python main.py
 ```
-You can adjust:
-- number of TSS folds  (in main.py)
-- ratio of train/test period length (in optimizer.py)  
+(Note: The number of Time Series Split folds can be adjusted directly in main.py, and the train/test ratio in optimizer.py.)
 
-### 2. Run Live Trading (Bybit)
-Review and adjust configs:  
-- `prod_config_long.py`  
-- `prod_config_short.py`  
-
-Then run:
+### 2. Live Trading
+First, review and adjust your production configs (`prod_config_*.py`). Then run the trader:
 ```bash
 python run_live.py
 ```
-⚠️ Use **testnet API keys** first. Never commit real keys to the repo.
+⚠️ Use testnet API keys in your `.env` file first.
+
+### 3. Monitoring
+Run the independent watchdog in a separate terminal to receive Telegram alerts:
+```bash
+python watchdog.py
+```
+
+### 4. Interactive Tuning
+For manual parameter fine-tuning and rapid testing, use the interactive tool:
+```bash
+python interactive_tester.py
+```
 
 ---
 
@@ -181,16 +193,13 @@ train_max_dd: -20% | test_max_dd: -11%
 ---
 
 ## Возможности
-- Бэктест через `main.py`  
-- Реальная торговля через `run_live.py` (Bybit)  
-- Двухступенчатая проверка:  
-  1. **Оптимизация параметров через Optuna**  
-  2. **Закрепление результата через Time Series Split**  
-- Возможность менять количество фолдов и длину train/test периода  
-- Целевая функция в `optimizer.py` может быть изменена  
-- Поддержка нескольких стратегий  
-- Логирование, отчётность, watchdog, визуализация  
-- Продакшн-конфиги для long/short стратегий  
+- **Высокопроизводительный бэктест:** Ядро системы компилируется с помощью `numba` для огромного прироста скорости, что позволяет проводить быструю и масштабную оптимизацию.
+- **Продвинутая оптимизация Optuna:** Используется сложная целевая функция с иерархической фильтрацией для эффективного поиска устойчивых и прибыльных стратегий.
+- **Независимый "Сторож" (Watchdog):** Отдельный процесс `watchdog.py` отслеживает состояние бота, анализирует логи и отправляет подробные уведомления о всех ключевых событиях в Telegram.
+- **Мульти-стратегическая архитектура:** Файл `config.py` работает как библиотека стратегий, позволяя легко переключаться между разными торговыми моделями (тренд, скальпинг).
+- **Детальное логирование сделок:** Система автоматически сохраняет полный список сделок из лучшей попытки Optuna в CSV-файл для углубленного анализа.
+- **Двухэтапная проверка стратегий:** Используется надежный конвейер, где стратегии сначала находятся с помощью Optuna, а затем проверяются на устойчивость через Time Series Split.
+- **Боевой торговый модуль:** Полнофункциональный модуль для реальной торговли на Bybit, спроектированный для максимальной надежности и соответствия бэктесту.
 
 ---
 
@@ -230,6 +239,10 @@ train_max_dd: -20% | test_max_dd: -11%
 
 - Умный Кулдаун: После закрытия каждой сделки (неважно, прибыльной или убыточной) система активирует интеллектуальный период "остывания" для данной торговой пары. Это предотвращает мгновенный повторный вход в нестабильный рынок, позволяя отфильтровать шум и избежать избыточной торговли.
 
+- Динамический "Губернатор Риска": Автоматически снижает риск на сделку в зависимости от текущей просадки от максимального капитала (High-Water Mark), защищая депозит в периоды неудач.
+  
+- Сверка состояния и "спасение" позиций: Механизм самодиагностики, который постоянно сверяет состояние бота с биржей. В случае рассинхрона система способна "подобрать" потерянную позицию и взять ее под управление.
+
 ---
 
 ## Установка
@@ -260,25 +273,31 @@ pip install -r requirements.txt
 
 ## Использование
 
-### 1. Запуск бэктеста
-Редактируем `config.py` и запускаем:
+### 1. Бэктестинг и оптимизация
+Отредактируйте `config.py`, чтобы задать стратегию и сетку параметров, затем запустите:
 ```bash
 python main.py
 ```
-Можно регулировать:
-- число фолдов TSS (в main.py)
-- баланс длины train/test периода (в optimizer.py)
+(Примечание: количество фолдов для Time Series Split можно изменить прямо в `main.py`, а соотношение train/test — в `optimizer.py`.)
 
-### 2. Запуск боевого модуля (Bybit)
-Проверить и настроить:  
-- `prod_config_long.py`  
-- `prod_config_short.py`  
-
-Затем:
+### 2. Реальная торговля
+Сначала проверьте и настройте "боевые" конфиги (`prod_config_*.py`). Затем запустите торговца: 
 ```bash
 python run_live.py
 ```
-⚠️ Сначала используйте **testnet API keys**. Никогда не храните реальные ключи в коде.  
+⚠️ Сначала используйте testnet API keys в вашем .env файле.
+
+### 3. Мониторинг
+Запустите независимого "сторожа" в отдельном терминале для получения оповещений в Telegram:
+```bash
+python watchdog.py
+```
+
+### 4. Интерактивная настройка
+Для ручной "подгонки" параметров и быстрой проверки гипотез, используйте интерактивный инструмент:
+```bash
+python interactive_tester.py
+```
 
 ---
 
