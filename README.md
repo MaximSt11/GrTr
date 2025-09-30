@@ -26,6 +26,36 @@ It provides tools for **data fetching, indicators, backtesting, parameter optimi
 
 ---
 
+## Strategy Logic & Trade Management
+
+**Signal Generation Philosophy**
+
+The default strategy is built on a dual-EMA trend-following model with RSI-based exits.
+
+- Long Signal: A long position is initiated when the closing price is above both a short-term (tactical) and a long-term (macro) Exponential Moving Average (EMA), indicating alignment in the trend. The position is exited if the Relative Strength Index (RSI) moves into an overbought condition (e.g., above 75), suggesting the move is exhausted.
+
+- Short Signal: A short position is initiated when the price is below both tactical and macro EMAs. An optional ADX filter can be enabled to ensure entries only occur during strong trends. The position is exited if the RSI moves into an oversold condition (e.g., below 25).
+
+**This is the baseline logic, but the framework is designed for flexibility**. If you have a different trading philosophy, you can easily modify the conditions within the `generate_signals` function to implement your own unique entry and exit criteria.
+
+**Advanced Trade Management Features**
+
+The true strength of this framework lies not just in its entry signals, but in its sophisticated suite of trade and risk management tools, allowing for precise control over every position:
+
+- Position Scaling (Pyramiding): Automatically adds to winning positions to maximize profit during strong trends, with a configurable maximum position size.
+
+- Dynamic Trailing Stops: The stop-loss automatically moves to lock in profits as the price moves in your favor, based on ATR or a fixed percentage.
+
+- Partial Take-Profits: Allows you to secure gains by closing a portion of your position when it hits a predefined profit target.
+
+- Profit Lock (Breakeven Stop): Once a trade is sufficiently in profit, the stop-loss can be moved to the entry price, effectively eliminating the risk of that trade turning into a loss.
+
+- ATR-Based Sizing: Position sizes can be calculated automatically based on market volatility (ATR) to maintain consistent risk across different assets and market conditions.
+
+- Time-Based Exits: Positions can be automatically closed if they remain open for longer than a specified duration (e.g., `max_hold_hours`).
+
+---
+
 ## Installation
 ```bash
 git clone https://github.com/MaximSt11/GrTr.git
@@ -155,6 +185,37 @@ train_max_dd: -20% | test_max_dd: -11%
 - Продакшн-конфиги для long/short стратегий  
 
 ---
+
+## Логика Стратегии и Управление Сделками
+
+**Философия Генерации Сигналов**
+
+Стандартная стратегия построена на трендовой модели с использованием двух EMA и выходами по RSI.
+
+- Сигнал на покупку (Long): Длинная позиция открывается, когда цена закрытия находится выше как краткосрочной (тактической), так и долгосрочной (макро) экспоненциальной скользящей средней (EMA). Это указывает на совпадение трендов. Выход из позиции происходит, если индикатор RSI входит в зону перекупленности (например, выше 75), что говорит о возможном истощении движения.
+
+- Сигнал на продажу (Short): Короткая позиция открывается, когда цена находится ниже обеих EMA. Дополнительно можно включить фильтр по ADX, чтобы входить в рынок только при наличии сильного тренда. Выход из позиции осуществляется, когда RSI входит в зону перепроданности (например, ниже 25).
+
+**Это базовая логика, но система создана гибкой**. Если вы придерживаетесь другой торговой философии, вы можете легко поменять условия в функции `generate_signals`, чтобы реализовать ваши собственные критерии входа и выхода.
+
+**Продвинутые Функции Управления Сделками**
+
+Истинная сила фреймворка заключается не только в сигналах, но и в продвинутом наборе инструментов для управления торговлей и рисками, что дает полный контроль над каждой позицией:
+
+- Масштабирование позиции (Пирамидинг): Автоматическое добавление к прибыльным позициям для максимизации дохода во время сильных трендов с настраиваемым максимальным размером.
+
+- Динамический Трейлинг-Стоп: Стоп-лосс автоматически перемещается для фиксации прибыли по мере движения цены в вашу пользу, основываясь на ATR или фиксированном проценте.
+
+- Частичная Фиксация Прибыли: Позволяет зафиксировать часть прибыли, закрыв долю позиции при достижении заранее определенной цели.
+
+- Замок на прибыль (Перевод в безубыток): Как только сделка достигает достаточной прибыли, стоп-лосс может быть перемещен на точку входа, что полностью исключает риск превращения этой сделки в убыточную.
+
+- Расчет размера по ATR: Размер позиции может рассчитываться автоматически на основе волатильности рынка (ATR) для поддержания постоянного уровня риска для разных активов и условий.
+
+- Выход по времени: Позиции могут быть автоматически закрыты, если они остаются открытыми дольше заданного периода (например, `max_hold_hours`).
+
+---
+
 
 ## Установка
 ```bash
