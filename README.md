@@ -1,6 +1,6 @@
 # GrTr — Flexible Trading System / Гибкая торговая система
 
-**EN | [RU version below](#-гибкая-торговая-система-russian)**
+**EN | [RU version below](#-гибкая-торговая-система)**
 
 ---
 
