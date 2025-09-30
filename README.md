@@ -32,6 +32,12 @@ A core principle of this project is to ensure that the live trading module (`tra
 
 The baseline strategy uses a dual-EMA trend-following model for entries and RSI-based signals for exits. The true edge lies in its advanced trade management logic after a position is opened. This logic is fully customizable in the `generate_signals` function to fit your own trading philosophy.
 
+- **State Reconciliation & Self-Healing (`reconcile_state_with_exchange`)**: The trader acts as an "immune system" by periodically checking its internal state against the actual position data from the exchange. If a discrepancy is found (e.g., a "zombie" position), it triggers a "rescue" protocol to take control of the orphaned position and apply the correct risk management. This prevents uncontrolled losses from desynchronization.
+
+- **Real-Time Risk Management via WebSocket (`WebSocketManager`)**: The framework uses a persistent WebSocket connection to receive real-time price ticks. This allows the most critical function—checking the stop-loss—to happen almost instantly (in milliseconds) rather than waiting for the next API poll (seconds), significantly reducing slippage on exits.
+
+- **Resilient API Communication (`api_retry_wrapper`)**: All critical calls to the exchange's API are wrapped in a retry mechanism. This makes the system resilient to transient network issues, request timeouts, or temporary exchange unavailability, preventing crashes due to common connection problems.
+
 ---
 
 ## Strategy Logic & Trade Management
@@ -205,6 +211,12 @@ train_max_dd: -20% | test_max_dd: -11%
 ## Дизайн Философия
 
 Соответствие Бэктеста и Реальной Торговли: Ключевой принцип проекта — максимальная идентичность боевого модуля (`trader.py`) и движка бэктестера (`backtester.py`). Оба модуля используют одну и ту же основную логику для генерации сигналов, расчета рисков и управления сделками. Я старался сделать модули максимально одинаковыми, чтобы боевой модуль в точности повторял то, что было протестировано, и результаты бэктестов заслуживали доверия.
+
+- **Сверка состояния и "самоисцеление" (`reconcile_state_with_exchange`)**: Трейдер работает как "иммунная система", периодически сверяя свое внутреннее состояние с реальными данными о позициях на бирже. При обнаружении расхождения (например, "зомби-позиция") запускается протокол "спасения", который берет потерянную позицию под контроль и применяет к ней корректный риск-менеджмент. Это предотвращает неконтролируемые убытки из-за рассинхронизации.
+
+- **Риск-менеджмент в реальном времени через WebSocket (`WebSocketManager`)**: Фреймворк использует постоянное WebSocket-соединение для получения тиков цены в реальном времени. Это позволяет самой критически важной функции — проверке стоп-лосса — происходить практически мгновенно (в миллисекундах), а не ждать следующего запроса к API (секунды), что значительно снижает проскальзывание на выходах.
+
+- **Устойчивость API-соединения (`api_retry_wrapper`)**: Все критические вызовы к API биржи обернуты в механизм повторных попыток. Это делает систему устойчивой к временным сетевым проблемам, таймаутам запросов или недоступности биржи, предотвращая сбои из-за стандартных проблем с соединением.
 
 ---
 
