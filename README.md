@@ -73,6 +73,12 @@ The true strength of this framework lies not just in its entry signals, but in i
 - Dynamic Risk Governor: Automatically reduces the risk per trade based on the current drawdown from the high-water mark, protecting capital during losing streaks.
   
 - State Reconciliation & Position Rescue: A self-healing mechanism that periodically checks for discrepancies between the bot's state and the exchange. It can "rescue" and take control of orphaned positions to prevent uncontrolled losses.
+
+- Profit Stagnation Exit: An advanced exit condition that closes a profitable trade if its profit decays significantly from its peak value within the trade. This actively protects unrealized gains from turning into smaller wins or losses.
+
+- Opportunistic Cooldown Override: The system can intelligently ignore its own "Smart Cooldown" period if a powerful breakout signal occurs, allowing it to seize strong, immediate opportunities without delay.
+
+- **Atomic Entry & Stop-Loss Placement: To minimize risk from the very first moment a trade is live, the system places the entry order and its corresponding stop-loss in a single, atomic API request. This ensures every position is protected from the instant of execution.
   
 ---
 
@@ -253,6 +259,12 @@ train_max_dd: -20% | test_max_dd: -11%
 - Динамический "Губернатор Риска": Автоматически снижает риск на сделку в зависимости от текущей просадки от максимального капитала (High-Water Mark), защищая депозит в периоды неудач.
   
 - Сверка состояния и "спасение" позиций: Механизм самодиагностики, который постоянно сверяет состояние бота с биржей. В случае рассинхрона система способна "подобрать" потерянную позицию и взять ее под управление.
+
+- Выход по стагнации прибыли: Продвинутое условие выхода, которое закрывает прибыльную сделку, если ее нереализованная прибыль значительно снижается от своего пикового значения. Это позволяет активно защищать накопленный профит.
+
+- Оппортунистическое прерывание кулдауна: Система способна интеллектуально проигнорировать свой собственный период "остывания" (Smart Cooldown), если возникает мощный пробойный сигнал, что позволяет не упускать сильные и быстрые рыночные движения.
+
+- Атомарное размещение ордеров: Чтобы минимизировать риск с самого первого момента открытия сделки, система размещает ордер на вход и соответствующий ему стоп-лосс одним, атомарным запросом к API. Это гарантирует, что каждая позиция защищена с момента ее исполнения.
 
 ---
 
