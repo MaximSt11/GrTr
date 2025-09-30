@@ -78,7 +78,7 @@ The true strength of this framework lies not just in its entry signals, but in i
 
 - Opportunistic Cooldown Override: The system can intelligently ignore its own "Smart Cooldown" period if a powerful breakout signal occurs, allowing it to seize strong, immediate opportunities without delay.
 
-- **Atomic Entry & Stop-Loss Placement: To minimize risk from the very first moment a trade is live, the system places the entry order and its corresponding stop-loss in a single, atomic API request. This ensures every position is protected from the instant of execution.
+- Atomic Entry & Stop-Loss Placement: To minimize risk from the very first moment a trade is live, the system places the entry order and its corresponding stop-loss in a single, atomic API request. This ensures every position is protected from the instant of execution.
   
 ---
 
