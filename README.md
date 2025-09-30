@@ -26,6 +26,12 @@ It provides tools for **data fetching, indicators, backtesting, parameter optimi
 
 ---
 
+## Design Philosophy
+
+Backtest & Live Parity: A core principle of this project is to ensure that the live trading module (`trader.py`) behaves identically to the backtesting engine (`backtester.py`). Both modules share the same core logic for signal generation, risk calculation, and trade management. This minimizes discrepancies and ensures that the live performance is a true reflection of the tested strategy.
+
+---
+
 ## Strategy Logic & Trade Management
 
 **Signal Generation Philosophy**
@@ -53,6 +59,8 @@ The true strength of this framework lies not just in its entry signals, but in i
 - ATR-Based Sizing: Position sizes can be calculated automatically based on market volatility (ATR) to maintain consistent risk across different assets and market conditions.
 
 - Time-Based Exits: Positions can be automatically closed if they remain open for longer than a specified duration (e.g., `max_hold_hours`).
+
+- Smart Cooldown: After a trade is closed (win or loss), the system activates an intelligent cooldown period for that specific trading pair. This prevents immediate re-entry into a volatile or uncertain market, helping to filter out market noise and avoid over-trading.
 
 ---
 
@@ -186,6 +194,12 @@ train_max_dd: -20% | test_max_dd: -11%
 
 ---
 
+## Дизайн Философия
+
+Соответствие Бэктеста и Реальной Торговли: Ключевой принцип проекта — максимальная идентичность боевого модуля (`trader.py`) и движка бэктестера (`backtester.py`). Оба модуля используют одну и ту же основную логику для генерации сигналов, расчета рисков и управления сделками. Я старался сделать модули максимально одинаковыми, чтобы боевой модуль в точности повторял то, что было протестировано, и результаты бэктестов заслуживали доверия.
+
+---
+
 ## Логика Стратегии и Управление Сделками
 
 **Философия Генерации Сигналов**
@@ -214,8 +228,9 @@ train_max_dd: -20% | test_max_dd: -11%
 
 - Выход по времени: Позиции могут быть автоматически закрыты, если они остаются открытыми дольше заданного периода (например, `max_hold_hours`).
 
----
+- Умный Кулдаун: После закрытия каждой сделки (неважно, прибыльной или убыточной) система активирует интеллектуальный период "остывания" для данной торговой пары. Это предотвращает мгновенный повторный вход в нестабильный рынок, позволяя отфильтровать шум и избежать избыточной торговли.
 
+---
 
 ## Установка
 ```bash
