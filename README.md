@@ -60,8 +60,8 @@ Edit `config.py` and run:
 python main.py
 ```
 You can adjust:
-- number of TSS folds  
-- ratio of train/test period length  
+- number of TSS folds  (in main.py)
+- ratio of train/test period length (in optimizer.py)  
 
 ### 2. Run Live Trading (Bybit)
 Review and adjust configs:  
@@ -108,11 +108,11 @@ train_max_dd: -20% | test_max_dd: -11%
 ---
 
 ## Project Structure (short)
-- `main.py` — backtest entrypoint  
+- `main.py` — backtest entrypoint  (with customizable number of TSS folds)
 - `run_live.py` — live trading entrypoint  
 - `backtester.py` — backtesting core  
-- `optimizer.py` — optimization (with customizable target function)  
-- `indicators.py` — trading indicators  
+- `optimizer.py` — optimization (with customizable target function and ratio of train/test period length)  
+- `indicators.py` — trading TA indicators  
 - `trader.py`, `trader_utils.py` — live trading logic  
 - `prod_config_*.py` — production configs  
 - `requirements.txt` — dependencies  
@@ -132,7 +132,7 @@ train_max_dd: -20% | test_max_dd: -11%
 
 ---
 
-# 🇷🇺 Гибкая торговая система (Russian)
+# 🇷🇺 Гибкая торговая система
 
 ## Обзор
 **GrTr** — модульный фреймворк для алгоритмической торговли на Python.  
@@ -190,8 +190,8 @@ pip install -r requirements.txt
 python main.py
 ```
 Можно регулировать:
-- число фолдов TSS  
-- баланс длины train/test периода  
+- число фолдов TSS (в main.py)
+- баланс длины train/test периода (в optimizer.py)
 
 ### 2. Запуск боевого модуля (Bybit)
 Проверить и настроить:  
@@ -238,11 +238,11 @@ train_max_dd: -20% | test_max_dd: -11%
 ---
 
 ## Структура проекта (коротко)
-- `main.py` — точка входа бэктеста  
+- `main.py` — точка входа бэктеста (настраиваемое число фолдов TSS)
 - `run_live.py` — точка входа реальной торговли  
 - `backtester.py` — ядро бэктеста  
-- `optimizer.py` — оптимизация (целевая функция настраивается)  
-- `indicators.py` — индикаторы  
+- `optimizer.py` — оптимизация (целевая функция и баланс длины train/test периода настраиваются)  
+- `indicators.py` — индикаторы ТА
 - `trader.py`, `trader_utils.py` — логика торговли  
 - `prod_config_*.py` — конфиги  
 - `requirements.txt` — зависимости  
