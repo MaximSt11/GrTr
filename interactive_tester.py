@@ -2,7 +2,7 @@ import pandas as pd
 from main import run_fixed_params_test
 from config import CAPITAL
 
-# --- КОНСТАНТЫ ЦВЕТА ---
+# --- КОНСТАНТЫ ЦВЕТА/COLOR CONSTANTS ---
 GREEN = '\033[92m'
 RED = '\033[91m'
 CYAN = '\033[96m'
@@ -11,17 +11,20 @@ RESET = '\033[0m'
 
 
 def is_realistic(results):
-    """Проверяет, являются ли результаты бэктеста реалистичными."""
-    MAX_REALISTIC_SHARPE = 999999999999999999999999999
-    MAX_REALISTIC_PROFIT_FACTOR = 999999999999999999999999999
+    """
+    (EN) Checks if the backtest results are realistic.
+    (RU) Проверяет, являются ли результаты бэктеста реалистичными.
+    """
+    MAX_REALISTIC_SHARPE = 10
+    MAX_REALISTIC_PROFIT_FACTOR = 5
 
     if results['test_sharpe'] > MAX_REALISTIC_SHARPE:
-        print(f"{YELLOW}ПРЕДУПРЕЖДЕНИЕ: Результат с Test Sharpe > {MAX_REALISTIC_SHARPE} считается аномальным.{RESET}")
+        print(f"{YELLOW}WARNING: A result with Test Sharpe > {MAX_REALISTIC_SHARPE} is considered anomalous.{RESET}")
         return False
 
     if results['test_profit_factor'] > MAX_REALISTIC_PROFIT_FACTOR:
         print(
-            f"{YELLOW}ПРЕДУПРЕЖДЕНИЕ: Результат с Test Profit Factor > {MAX_REALISTIC_PROFIT_FACTOR} считается аномальным.{RESET}")
+            f"{YELLOW}WARNING: A result with Test Profit Factor > {MAX_REALISTIC_PROFIT_FACTOR} is considered anomalous.{RESET}")
         return False
 
     return True
@@ -29,10 +32,10 @@ def is_realistic(results):
 
 def print_summary(current_results, best_results):
     if not current_results:
-        print("Тест не вернул результатов.")
+        print("The test returned no results.")
         return
 
-    print(f"\n{CYAN}--- Сводка по TimeSeriesSplit ---{RESET}")
+    print(f"\n{CYAN}--- TimeSeriesSplit Summary ---{RESET}")
 
     def print_metric_line(metric_name, train_curr, test_curr, train_best, test_best):
         train_delta_str = ""
@@ -53,7 +56,7 @@ def print_summary(current_results, best_results):
             else:
                 test_delta_str = f" {color}({delta:+.2f}){RESET}"
 
-        # Основной вывод
+        # Основной вывод/Main output
         if "рейт" in metric_name or "просадка" in metric_name:
             print(
                 f"{metric_name:<25} | Train: {train_curr:.1%}{train_delta_str} | Test: {test_curr:.1%}{test_delta_str}")
@@ -87,17 +90,17 @@ if __name__ == '__main__':
         'position_scaling': True,
         'max_position_multiplier': 1.59,
 
-        # === ATR и стопы ===
+        # === ATR и стопы/ATR and Stops ===
         'atr_period': 21,
         'atr_stop_multiplier': 2.63,
         'breakeven_atr_multiplier': 1.66,
         'aggressive_breakout_stop_multiplier': 0.3,
 
-        # --- ПАРАМЕТРЫ "ЗАМКА НА ПРИБЫЛЬ" ---
+        # --- ПАРАМЕТРЫ "ЗАМКА НА ПРИБЫЛЬ"/"PROFIT LOCK" PARAMETERS ---
         'profit_lock_trigger_pct': 0.0,
         'profit_lock_target_pct': 0.0,
 
-        # === Трейлинг ===
+        # === Трейлинг/Trailing ===
         'trail_atr_multiplier': 6.0,
         'trail_early_activation_atr_multiplier': 0.72,
         'aggressive_trail_atr_multiplier': 0.45,
@@ -108,7 +111,7 @@ if __name__ == '__main__':
         'partial_tp_fraction': 0.31,
         'partial_take_profit': False,
 
-        # === Фильтры ===
+        # === Фильтры/Filters ===
         'rsi_period': 28,
         'grid_lower_rsi': 33,
         'use_regime_filter': True,
@@ -117,7 +120,7 @@ if __name__ == '__main__':
         'adx_period': 20,
         'adx_threshold': 34,
 
-        # === Время удержания ===
+        # === Время удержания/Holding Time ===
         'max_hold_hours': 48,
         'cooldown_period_candles': 2,
         'stagnation_atr_threshold': 6.94,
@@ -131,54 +134,54 @@ if __name__ == '__main__':
     best_results_so_far = None
     best_params_so_far = None
 
-    print("--- Интерактивный тюнер стратегий ---")
-    print("Доступные команды: 'run', 'exit', 'reset', 'best'")
+    print("--- Interactive Strategy Tuner ---")
+    print("Available commands: 'run', 'exit', 'reset', 'best'")
 
     while True:
-        param_to_change = input("Введите имя параметра для изменения или команду: ")
+        param_to_change = input("Enter the parameter name to change or a command: ")
 
         if param_to_change.lower() == 'exit':
             break
 
         if param_to_change.lower() == 'run':
-            print("Запускаю тест с текущими параметрами...")
+            print("Running test with current parameters...")
             results = run_fixed_params_test("SOL/USDT", current_params, "interactive_run")
 
             if results:
                 print_summary(results, best_results_so_far)
                 if not is_realistic(results):
-                    print("Аномальный результат отфильтрован и не будет считаться лучшим.")
+                    print("Anomalous result filtered and will not be considered the best.")
                 elif best_results_so_far is None or results['test_sharpe'] > best_results_so_far['test_sharpe']:
-                    print(f"{GREEN}*** Найден новый лучший результат по Test Sharpe! ***{RESET}")
+                    print(f"{GREEN}*** Found a new best result by Test Sharpe! ***{RESET}")
                     best_results_so_far = results.copy()
                     best_params_so_far = current_params.copy()
             continue
 
         if param_to_change.lower() == 'best':
             if best_params_so_far:
-                print("--- Лучшие параметры сессии ---")
+                print("--- Best Session Parameters ---")
                 for key, val in best_params_so_far.items():
                     print(f"  {key}: {val}")
                 print("-----------------------------")
             else:
-                print("Лучший результат еще не найден.")
+                print("No best result has been found yet.")
             continue
 
         if param_to_change.lower() == 'reset':
             if best_params_so_far:
                 current_params = best_params_so_far.copy()
-                print("Параметры сброшены к лучшим найденным в сессии.")
+                print("Parameters have been reset to the best found in the session.")
             else:
                 current_params = base_params.copy()
-                print("Параметры сброшены к базовым.")
+                print("Parameters have been reset to the base defaults.")
             continue
 
         if param_to_change not in current_params:
-            print("Ошибка: такого параметра нет.")
+            print("Error: parameter does not exist.")
             continue
 
         new_value_str = input(
-            f"Текущее значение '{param_to_change}' = {current_params[param_to_change]}. Введите новое: ")
+            f"Current value of '{param_to_change}' = {current_params[param_to_change]}. Enter new value: ")
 
         try:
             original_value = current_params[param_to_change]
@@ -186,6 +189,7 @@ if __name__ == '__main__':
                 current_params[param_to_change] = new_value_str.lower() in ['true', '1', 't', 'y']
             else:
                 current_params[param_to_change] = type(original_value)(new_value_str)
-            print(f"Параметр '{param_to_change}' изменен на {current_params[param_to_change]}")
+            print(f"Parameter '{param_to_change}' changed to {current_params[param_to_change]}")
         except (ValueError, TypeError):
-            print("Ошибка: неверный тип значения.")
+
+            print("Error: invalid value type.")
