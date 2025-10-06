@@ -22,6 +22,28 @@ def process_positions(signals, close, high, low, atr, rsi,
                       n_partial_levels, partial_levels, position_scaling, max_position_multiplier,
                       scale_add_atr_multiplier,
                       profit_lock_trigger_pct, profit_lock_target_pct, aggressive_breakout_stop_multiplier):
+    """
+    (EN) Core backtesting loop, JIT-compiled with Numba for performance.
+    Iterates through market data, managing position state (entry, exits, SL/TP, scaling)
+    and calculating trade outcomes based on the provided signals and strategy parameters.
+
+    (RU) Основной цикл бэктестинга, JIT-компилированный с помощью Numba для производительности.
+    Итерируется по рыночным данным, управляя состоянием позиции (вход, выходы, SL/TP, пирамидинг)
+    и рассчитывая результаты сделок на основе поданных сигналов и параметров стратегии.
+
+    Args:
+        signals (np.array): Array of trading signals (1: long, -1: short, 10: exit long, -10: exit short).
+        close (np.array): Array of closing prices.
+        high (np.array): Array of high prices.
+        low (np.array): Array of low prices.
+        atr (np.array): Array of ATR indicator values.
+        rsi (np.array): Array of RSI indicator values.
+        *args: Various float and int strategy parameters.
+
+    Returns:
+        tuple: A tuple of NumPy arrays containing details for each executed trade
+               (entry/exit indices, prices, returns, sizes, exit reasons).
+    """
     n = len(signals)
     max_positions = n * 5
     entry_indices = np.zeros(max_positions, dtype=int64)
@@ -66,7 +88,7 @@ def process_positions(signals, close, high, low, atr, rsi,
     for i in range(n):
         is_cooldown_override_trade = False
         if not in_long_position and not in_short_position:
-            # --- БЛОК ВХОДА В ПОЗИЦИЮ ---
+            # --- БЛОК ВХОДА В ПОЗИЦИЮ/POSITION ENTRY BLOCK  ---
             if i < cooldown_until_index:
                 if (signals[i] == 1 and i > 0 and close[i] > high[i - 1]):
                     is_cooldown_override_trade = True
@@ -99,7 +121,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                     if distance_to_low > 0:
                         stop_loss_distance = distance_to_low * aggressive_breakout_stop_multiplier
                         stop_loss = entry_price - stop_loss_distance
-                    else:  # Если low выше цены входа, используем стандартный стоп
+                    else:  # Если low выше цены входа, используем стандартный стоп/If low is higher than entry price, use the standard stop
                         stop_loss_distance = atr_at_entry * atr_stop_multiplier
                         stop_loss = entry_price - stop_loss_distance
                 else:
@@ -116,7 +138,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                     in_long_position = False
                     continue
 
-                # Инициализация всех переменных состояния для НОВОЙ LONG сделки
+                # Инициализация всех переменных состояния для НОВОЙ LONG сделки/Initialize all state variables for a NEW LONG trade
                 initial_size = rounded_size
                 current_size = rounded_size
                 max_pos_size = initial_size * max_position_multiplier
@@ -134,7 +156,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                 continue
 
             elif signals[i] == -1:
-                # --- ЛОГИКА ВХОДА В SHORT ---
+                # --- ЛОГИКА ВХОДА В SHORT/SHORT ENTRY LOGIC ---
                 if rsi[i] < grid_lower_rsi:
                     continue
                 in_short_position = True
@@ -146,7 +168,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                     if distance_to_high > 0:
                         stop_loss_distance = distance_to_high * aggressive_breakout_stop_multiplier
                         stop_loss = entry_price + stop_loss_distance
-                    else:  # Если high ниже цены входа, используем стандартный стоп
+                    else:  # Если high ниже цены входа, используем стандартный стоп/If high is lower than entry price, use the standard stop
                         stop_loss_distance = atr_at_entry * atr_stop_multiplier
                         stop_loss = entry_price + stop_loss_distance
                 else:
@@ -160,7 +182,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                 if rounded_size < min_amount_precision:
                     in_short_position = False
                     continue
-                # Инициализация всех переменных состояния для НОВОЙ SHORT сделки
+                # Инициализация всех переменных состояния для НОВОЙ SHORT сделки/Initialize all state variables for a NEW SHORT trade
                 initial_size = rounded_size
                 current_size = rounded_size
                 max_pos_size = initial_size * max_position_multiplier
@@ -177,9 +199,9 @@ def process_positions(signals, close, high, low, atr, rsi,
                     partial_levels_prices[j] = entry_price - (atr_at_entry * partial_levels[j])
                 continue
 
-        # --- УПРАВЛЕНИЕ LONG ПОЗИЦИЕЙ ---
+        # --- УПРАВЛЕНИЕ LONG ПОЗИЦИЕЙ/LONG POSITION MANAGEMENT ---
         if in_long_position:
-            # 1. ЧАСТИЧНЫЕ ВЫХОДЫ
+            # 1. ЧАСТИЧНЫЕ ВЫХОДЫ/PARTIAL EXITS
             partial_exit_occurred = False
             if partial_take_profit and n_partial_levels > 0:
                 for j in range(n_partial_levels):
@@ -211,7 +233,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                     if current_capital > high_water_mark: high_water_mark = current_capital
                 continue
 
-            # 2. ПИРАМИДИНГ (если не было частичного выхода на этой свече)
+            # 2. ПИРАМИДИНГ (если не было частичного выхода на этой свече)/PYRAMIDING (if no partial exit on this candle)
             if position_scaling and (is_breakeven_set or is_trailing_active) and signals[
                 i] == 1 and current_size < max_pos_size:
                 if close[i] >= last_add_price + (scale_add_atr_multiplier * atr[i]):
@@ -223,19 +245,19 @@ def process_positions(signals, close, high, low, atr, rsi,
                         add_price = close[i] * (1 + slippage)
                         add_margin = (rounded_add * add_price) / leverage
                         add_fee = rounded_add * add_price * taker_fee
-                        total_add_cost = (add_margin + add_fee) * 1.05  # Используем буфер 5%
-                        # Если капитала достаточно, выполняем добавление
+                        total_add_cost = (add_margin + add_fee) * 1.05  # Используем буфер 5%/Use a 5% buffer
+                        # Если капитала достаточно, выполняем добавление/If capital is sufficient, execute the addition
                         if total_add_cost <= current_capital:
                             entry_value = (entry_price * current_size) + (add_price * rounded_add)
                             current_size += rounded_add
-                            entry_price = entry_value / current_size  # Усредняем цену входа
+                            entry_price = entry_value / current_size  # Усредняем цену входа/Averaging the entry price
                             entry_fee += add_fee
                             initial_entry_fee += add_fee
                             max_price = max(max_price, add_price)
                             last_add_price = add_price
-                        # Если капитала не хватает, добаление просто пропускается
+                        # Если капитала не хватает, добаление просто пропускается/If capital is insufficient, the addition is simply skipped
 
-            # 3. УПРАВЛЕНИЕ ОСТАТКОМ И ПОЛНЫЕ ВЫХОДЫ
+            # 3. УПРАВЛЕНИЕ ОСТАТКОМ И ПОЛНЫЕ ВЫХОДЫ/REMAINDER MANAGEMENT AND FULL EXITS
             if not is_breakeven_set and breakeven_atr_multiplier > 0:
                 breakeven_trigger_price = entry_price + (atr_at_entry * breakeven_atr_multiplier)
                 if close[i] >= breakeven_trigger_price:
@@ -321,7 +343,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                     risk_capital_base = high_water_mark
 
         elif in_short_position:
-            # 1. ЧАСТИЧНЫЕ ВЫХОДЫ (ЗЕРКАЛЬНО)
+            # 1. ЧАСТИЧНЫЕ ВЫХОДЫ (ЗЕРКАЛЬНО)/PARTIAL EXITS (MIRRORED)
             partial_exit_occurred = False
             if partial_take_profit and n_partial_levels > 0:
                 for j in range(n_partial_levels):
@@ -353,7 +375,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                     if current_capital > high_water_mark: high_water_mark = current_capital
                 continue
 
-            # 2. ПИРАМИДИНГ (ЗЕРКАЛЬНО)
+            # 2. ПИРАМИДИНГ (ЗЕРКАЛЬНО)/PYRAMIDING (MIRRORED)
             if position_scaling and (is_breakeven_set or is_trailing_active) and signals[
                 i] == -1 and current_size < max_pos_size:
                 if close[i] <= last_add_price - (scale_add_atr_multiplier * atr[i]):
@@ -368,7 +390,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                         add_margin = (rounded_add * add_price) / leverage
                         add_fee = rounded_add * add_price * taker_fee
                         total_add_cost = (add_margin + add_fee) * 1.05
-                        # Если капитала достаточно, выполняем добавление
+                        # Если капитала достаточно, выполняем добавление/If capital is sufficient, execute the addition
                         if total_add_cost <= current_capital:
                             entry_value = (entry_price * current_size) + (add_price * rounded_add)
                             current_size += rounded_add
@@ -378,7 +400,7 @@ def process_positions(signals, close, high, low, atr, rsi,
                             min_price = min(min_price, add_price)
                             last_add_price = add_price
 
-            # 3. УПРАВЛЕНИЕ ОСТАТКОМ И ПОЛНЫЕ ВЫХОДЫ (ЗЕРКАЛЬНО)
+            # 3. УПРАВЛЕНИЕ ОСТАТКОМ И ПОЛНЫЕ ВЫХОДЫ (ЗЕРКАЛЬНО)/REMAINDER MANAGEMENT AND FULL EXITS (MIRRORED)
             if not is_breakeven_set and breakeven_atr_multiplier > 0:
                 breakeven_trigger_price = entry_price - (atr_at_entry * breakeven_atr_multiplier)
                 if close[i] <= breakeven_trigger_price:
@@ -470,7 +492,16 @@ def process_positions(signals, close, high, low, atr, rsi,
 
 def generate_signals(df, params):
     """
-    Генерирует сигналы в зависимости от режима, указанного в параметрах.
+    (EN) Generates trading signals based on the strategy 'mode' specified in the params.
+
+    (RU) Генерирует торговые сигналы на основе режима 'mode' стратегии, указанного в параметрах.
+
+    Args:
+        df (pd.DataFrame): DataFrame with OHLCV data and required indicators.
+        params (dict): A dictionary containing strategy parameters, including the 'mode'
+                       ('long_only', 'short_only', etc.).
+    Returns:
+        pd.DataFrame: The original DataFrame with an added 'signal' column.
     """
     try:
         df = df.copy()
@@ -563,7 +594,7 @@ def backtest(df, params, trial_number=None, run_timestamp=None, period="unknown"
         partial_fraction = params.get('partial_tp_fraction', 0.5)
         aggressive_breakout_stop_multiplier = params.get('aggressive_breakout_stop_multiplier', 0.0)
 
-        # --- подготовка multi-level partial TP и scaling params ---
+        # --- подготовка multi-level partial TP и scaling params/Prepare multi-level partial TP and scaling params ---
         partial_tp_levels_list = params.get('partial_tp_levels', [1.0, 2.0, 3.0])
         n_partial_levels = len(partial_tp_levels_list)
         partial_levels = np.array(partial_tp_levels_list, dtype=np.float64)
@@ -592,7 +623,7 @@ def backtest(df, params, trial_number=None, run_timestamp=None, period="unknown"
             logging.debug("No trades executed")
             return None
 
-        # --- СЛОВАРЬ ПРИЧИН ВЫХОДА ---
+        # --- СЛОВАРЬ ПРИЧИН ВЫХОДА/EXIT REASON DICTIONARY ---
         reason_map = {
             1: 'stop_loss',
             2: 'take_profit',
@@ -641,11 +672,11 @@ def backtest(df, params, trial_number=None, run_timestamp=None, period="unknown"
         win_rate = float(np.mean(returns > 0))
         profit_factor = float(np.sum(returns[returns > 0]) / (-np.sum(returns[returns < 0]) + 1e-10))
 
-        # Метрики на основе fractional returns
+        # Метрики на основе fractional returns/Metrics based on fractional returns
         initial_capital = capital
         equity_per_trade = initial_capital * np.cumprod(1 + returns)
 
-        # Аппроксимация daily equity
+        # Аппроксимация daily equity/Daily equity approximation
         total_days = max((df.index[-1] - df.index[0]).days, 1)
         daily_equity_approx = np.zeros(total_days)
         daily_equity_approx[0] = initial_capital
