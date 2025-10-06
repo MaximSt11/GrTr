@@ -14,11 +14,15 @@ from utils.visualizer import save_optuna_plots
 
 def deviation_reporter_callback(study: optuna.study.Study, trial: optuna.trial.FrozenTrial):
     """
-    Callback "Аналитик Отклонений":
+    (EN) "Deviation Analyst" Callback:
+    1. Reports the parameters of each new leader.
+    2. Shows the top 5 parameters where the leader DEVIATES most from the average.
+
+    (RU) Callback "Аналитик Отклонений":
     1. Сообщает о параметрах каждого нового лидера.
     2. Показывает топ-5 параметров, по которым лидер сильнее всего ОТЛИЧАЕТСЯ от среднего.
     """
-    # Проверяем, является ли текущий триал новым лучшим
+    # Проверяем, является ли текущий триал новым лучшим/Check if the current trial is the new best one
     if study.best_trial and study.best_trial.number == trial.number:
 
         print("\n" + "=" * 80)
@@ -42,27 +46,27 @@ def deviation_reporter_callback(study: optuna.study.Study, trial: optuna.trial.F
         print(f"STATUS: {status}")
         print("-" * 80)
 
-        # --- БЛОК АНАЛИЗА ОТКЛОНЕНИЙ ---
-        # Собираем все предыдущие триалы, у которых были числовые параметры
+        # --- БЛОК АНАЛИЗА ОТКЛОНЕНИЙ/DEVIATION ANALYSIS BLOCK ---
+        # Собираем все предыдущие триалы, у которых были числовые параметры/Collect all previous trials that had numerical parameters
         previous_trials = [t for t in study.trials if t.number < trial.number]
 
         if len(previous_trials) > 1:
-            # Создаем DataFrame из параметров предыдущих попыток
+            # Создаем DataFrame из параметров предыдущих попыток/Create a DataFrame from the parameters of previous trials
             previous_params_df = pd.DataFrame([t.params for t in previous_trials])
 
             deviations = {}
             for param, leader_value in trial.params.items():
-                # Работаем только с числовыми параметрами
+                # Работаем только с числовыми параметрами/Work only with numerical parameters
                 if isinstance(leader_value, (int, float)):
-                    # Считаем среднее и стандартное отклонение по предыдущим попыткам
+                    # Считаем среднее и стандартное отклонение по предыдущим попыткам/Calculate the mean and standard deviation from previous trials
                     mean_val = previous_params_df[param].mean()
                     std_val = previous_params_df[param].std()
                     if std_val > 0:  # Избегаем деления на ноль
-                        # Считаем Z-score - насколько лидер отклоняется от среднего в "сигмах"
+                        # Считаем Z-score - насколько лидер отклоняется от среднего в "сигмах"/Calculate Z-score - how much the leader deviates from the mean in "sigmas"
                         z_score = abs(leader_value - mean_val) / std_val
                         deviations[param] = z_score
 
-            # Сортируем параметры по силе отклонения и берем топ-5
+            # Сортируем параметры по силе отклонения и берем топ-5/Sort parameters by deviation strength and take the top 5
             top_5_deviations = sorted(deviations.items(), key=lambda item: item[1], reverse=True)[:5]
 
             print("Top 5 Deviating Parameters (what makes this leader different):")
@@ -86,24 +90,26 @@ def deviation_reporter_callback(study: optuna.study.Study, trial: optuna.trial.F
 
 def suggest_params(trial: optuna.Trial) -> Dict:
     """
-    Определение параметров для попытки Optuna с явной проверкой типов
+    (EN) Suggests parameters for an Optuna trial with explicit type checking
+    to prevent errors.
+    (RU) Определение параметров для попытки Optuna с явной проверкой типов
     для предотвращения ошибок.
     """
     params = {}
     for param_name, param_values in PARAM_GRID.items():
-        # Если значение в конфиге - это список из двух ЧИСЕЛ (и не boolean)
+        # Если значение в конфиге - это список из двух ЧИСЕЛ (и не boolean)/If the value in the config is a list of two NUMBERS (and not boolean)
         if (isinstance(param_values, (list, tuple)) and len(param_values) == 2 and
                 isinstance(param_values[0], (int, float)) and not isinstance(param_values[0], bool)):
 
-            # Если оба числа целые - используем suggest_int
+            # Если оба числа целые - используем suggest_int/If both numbers are integers - use suggest_int
             if all(isinstance(i, int) for i in param_values):
                 params[param_name] = trial.suggest_int(param_name, param_values[0], param_values[1])
-            # Иначе (если есть хоть одно дробное) - используем suggest_float
+            # Иначе (если есть хоть одно дробное) - используем suggest_float/Otherwise (if there is at least one float) - use suggest_float
             else:
                 params[param_name] = trial.suggest_float(param_name, param_values[0], param_values[1])
-        # Во всех остальных случаях (списки строк, bool'ов и т.д.) используем suggest_categorical
+        # Во всех остальных случаях (списки строк, bool'ов и т.д.) используем suggest_categorical/In all other cases (lists of strings, booleans, etc.) use suggest_categorical
         else:
-            # Убеждаемся, что передаем в suggest_categorical именно список
+            # Убеждаемся, что передаем в suggest_categorical именно список/Ensure we are passing a list to suggest_categorical
             choices = param_values if isinstance(param_values, list) else [param_values]
             params[param_name] = trial.suggest_categorical(param_name, choices)
 
@@ -112,16 +118,17 @@ def suggest_params(trial: optuna.Trial) -> Dict:
 
 def validate_params(params: Dict) -> bool:
     """
-    Проверка корректности параметров. Оставляем только актуальные проверки.
+    (EN) Validates the correctness of parameters. Only relevant checks are kept.
+    (RU) Проверка корректности параметров. Оставляем только актуальные проверки.
     """
 
-    # Проверка базовой валидности
+    # Проверка базовой валидности/Basic validity check
     if params.get('atr_period', 0) <= 0:
         return False
-    # Агрессивный трейлинг должен быть теснее стандартного
+    # Агрессивный трейлинг должен быть теснее стандартного/Aggressive trailing should be tighter than standard trailing
     if params.get('aggressive_trail_atr_multiplier', 999) >= params.get('trail_atr_multiplier', 0):
         return False
-    # Убедимся, что порог на выход по RSI не ниже "верхнего" фильтра
+    # Убедимся, что порог на выход по RSI не ниже "верхнего" фильтра/Ensure the RSI exit threshold is not lower than the "upper" filter
     if params.get('rsi_exit_high', 1e9) < params.get('grid_upper_rsi', 0):
         return False
 
@@ -130,7 +137,8 @@ def validate_params(params: Dict) -> bool:
 
 def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: Dict[str, pd.DataFrame]) -> float:
     """
-    Целевая функция. НЕ загружает данные, а берет их из готового словаря.
+    (EN) The objective function. Does NOT load data, but takes it from a pre-loaded dictionary.
+    (RU) Целевая функция. НЕ загружает данные, а берет их из готового словаря.
     """
     try:
         params = suggest_params(trial)
@@ -139,17 +147,17 @@ def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: 
         timeframe = params['timeframe']
         df = dataframes.get(timeframe)
         if df is None:
-            # Этот таймфрейм не был загружен, пропускаем попытку
+            # Этот таймфрейм не был загружен, пропускаем попытку/This timeframe was not loaded, skip the trial
             return float('-inf')
 
-        # Разделение данных
+        # Разделение данных/Data splitting
         train_size = int(len(df) * 0.5)
         gap = int(len(df) * 0.15)
         df_train = df.iloc[:train_size]
         df_test = df.iloc[train_size + gap:]
-        logging.debug(f"Попытка {trial.number} разделила данные: обучающая={len(df_train)} строк, тестовая={len(df_test)} строк")
+        logging.debug(f"Trial {trial.number} split data: train={len(df_train)} rows, test={len(df_test)} rows")
 
-        # Бэктесты
+        # Бэктесты/Backtests
         df_train = add_indicators(df_train, params)
         df_train = generate_signals(df_train, params)
         train_result = backtest(df_train, params, trial_number=trial.number, run_timestamp=run_timestamp, period="train", save_trades=False)
@@ -161,7 +169,7 @@ def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: 
         df_test = generate_signals(df_test, params)
         test_result = backtest(df_test, params, trial_number=trial.number, run_timestamp=run_timestamp, period="test", save_trades=False)
 
-        # Фильтр 1: "Выживаемость". Проверяем, что бэктесты прошли и сделок достаточно.
+        # Фильтр 1: "Выживаемость". Проверяем, что бэктесты прошли и сделок достаточно/Filter 1: "Survival". Check if backtests ran and there are enough trades.
         if not train_result or not test_result or train_result.get('num_trades', 0) < MIN_TRADES or test_result.get(
                 'num_trades', 0) < MIN_TRADES / 2:
             trial.set_user_attr('fail_reason', 'Insufficient trades')
@@ -182,64 +190,68 @@ def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: 
         test_pd = test_result.get('period_days', 0.0)
         train_pd = test_result.get('period_days', 0.0)
 
-        # Фильтр 2: "Прибыльность". Стратегия должна быть прибыльной на обоих периодах.
+        # Фильтр 2: "Прибыльность". Стратегия должна быть прибыльной на обоих периодах/Filter 2: "Profitability". The strategy must be profitable in both periods.
         if train_pf < 1.25 or test_pf < 1.25:
             trial.set_user_attr('fail_reason', 'Unprofitable')
             return -1000.0
 
-        # --- ФИЛЬТР 3 ---
-        # Защита от деления на ноль или очень малые значения, если train_sharpe почти нулевой
+        # --- ФИЛЬТР 3/FILTER 3 ---
+        # Защита от деления на ноль или очень малые значения, если train_sharpe почти нулевой/Protection against division by zero or very small values if train_sharpe is almost zero
         train_sharpe_safe = max(abs(train_sharpe), 0.1)
         sharpe_ratio = test_sharpe / train_sharpe_safe
 
         # Провалом считаем, если Шарп на тесте упал более чем на 70%
         # ИЛИ вырос более чем в 4 раза (показатель дикого переобучения)
+        # Failure is considered if the test Sharpe drops by more than 70%
+        # OR grows by more than 4 times (an indicator of wild overfitting)
         if sharpe_ratio < 0.3 or sharpe_ratio > 4.0:
             trial.set_user_attr('fail_reason', f'Not robust (Sharpe ratio train/test is {sharpe_ratio:.2f})')
             return -500.0
 
-        # Фильтр 4: "Управление риском". Просадка не должна быть катастрофической.
+        # Фильтр 4: "Управление риском". Просадка не должна быть катастрофической/Filter 4: "Risk Management". Drawdown must not be catastrophic.
         if train_dd < -0.4 or test_dd < -0.4:
             trial.set_user_attr('fail_reason', 'Too risky')
             return -100.0
 
-        # ФИЛЬТР 5: "Минимальная доходность"
+        # ФИЛЬТР 5: "Минимальная доходность"/FILTER 5: "Minimum Return"
         min_required_return = 0.5
         test_ar = test_result.get('annualized_return', 0)
         if test_ar < min_required_return:
             trial.set_user_attr('fail_reason', 'Profitability too low')
             return -50.0
 
-        # ФИЛЬТР 6: "КАЧЕСТВО ПРИБЫЛИ" (Calmar Ratio)
+        # ФИЛЬТР 6: "КАЧЕСТВО ПРИБЫЛИ" (Calmar Ratio)/FILTER 6: "PROFIT QUALITY" (Calmar Ratio)
         train_ar = train_result.get('annualized_return', 0)
         test_ar = test_result.get('annualized_return', 0)
 
-        # abs() нужен, так как просадка отрицательная
-        train_calmar = train_ar / (abs(train_dd) + 1e-6)  # +1e-6 для избежания деления на 0
+        # abs() нужен, так как просадка отрицательная/abs() is needed as drawdown is negative
+        train_calmar = train_ar / (abs(train_dd) + 1e-6)  # +1e-6 для избежания деления на 0/ +1e-6 to avoid division by 0
         test_calmar = test_ar / (abs(test_dd) + 1e-6)
 
         # Требуем, чтобы Calmar был не меньше 1 (зарабатываем на просадку хотя бы столько же)
         # и чтобы он не сильно падал на тесте.
+        # We require Calmar to be at least 1 (earn at least as much as the drawdown)
+        # and for it not to drop significantly on the test set.
         if train_calmar < 0.5:
             trial.set_user_attr('fail_reason', 'Low Calmar Ratio')
             return -40.0  # Используем тот же код, что и для низкой доходности
 
-        # ФИЛЬТР 7: "КОЛИЧЕСТВО СДЕЛОК"
+        # ФИЛЬТР 7: "КОЛИЧЕСТВО СДЕЛОК"/FILTER 7: "NUMBER OF TRADES"
         min_required_freq = test_nt / test_pd
         if min_required_freq < 0.1:
             trial.set_user_attr('fail_reason', 'Too low Frequency')
             return -25.0
 
-        # Штрафуем, если тейк-профит ближе стоп-лосса (R:R < 1)
+        # Штрафуем, если тейк-профит ближе стоп-лосса (R:R < 1)/Penalize if take-profit is closer than stop-loss (R:R < 1)
         if params['tp_atr_multiplier'] < params['atr_stop_multiplier']:
-            return -3000.0  # Присваиваем очень большой штраф
+            return -3000.0  # Присваиваем очень большой штраф/Assign a very large penalty
 
         if params['breakeven_atr_multiplier'] >= params['tp_atr_multiplier']:
-            return -4000.0  # Безубыток никогда не сработает
+            return -4000.0  # Безубыток никогда не сработает/Breakeven will never trigger
 
-        # --- ФИЛЬТР "НА РЕАЛИСТИЧНОСТЬ" ---
-        # Отсекаем аномально высокие значения, которые являются 100% переобучением
-        MAX_REALISTIC_SHARPE = 25  # Шарп выше 25 на 40-дневном тесте - это почти всегда стат. аномалия
+        # --- ФИЛЬТР "НА РЕАЛИСТИЧНОСТЬ"/"REALISM" FILTER ---
+        # Отсекаем аномально высокие значения, которые являются 100% переобучением/Filter out abnormally high values that are 100% overfitting
+        MAX_REALISTIC_SHARPE = 25  # Шарп выше 25 на 40-дневном тесте - это почти всегда стат. аномалия/A Sharpe above 25 on a 40-day test is almost always a stat. anomaly
 
         if test_result.get('sharpe', 0) > MAX_REALISTIC_SHARPE:
             trial.set_user_attr('fail_reason', f'Anomalous Sharpe > {MAX_REALISTIC_SHARPE}')
@@ -247,6 +259,8 @@ def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: 
 
         # Штрафуем итоговую оценку на величину разрыва между train и test
         # Чем больше разрыв, тем ниже будет итоговая оценка
+        # Penalize the final score by the magnitude of the gap between train and test
+        # The larger the gap, the lower the final score will be
         final_score = test_sharpe - abs(train_sharpe - test_sharpe)
 
         train_exit_reasons = train_result['trades']['exit_reason'].value_counts(normalize=True).to_dict()
@@ -255,7 +269,7 @@ def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: 
         test_exit_reasons = {k: float(v * 100) for k, v in test_exit_reasons.items()}
 
         logging.debug(
-            f"Попытка {trial.number} ПРОШЛА ВСЕ ФИЛЬТРЫ. Итоговая оценка (Test Profit Factor): {final_score:.4f}, "
+            f"Trial {trial.number} PASSED ALL FILTERS. Final score (Test Profit Factor): {final_score:.4f}, "
             f"train_return={train_result['cumulative_return']:.2%}, test_return={test_result['cumulative_return']:.2%}, "
             f"train_pf={train_result['profit_factor']:.2f}, test_pf={test_result['profit_factor']:.2f}")
 
@@ -295,19 +309,20 @@ def objective(trial: optuna.Trial, symbol: str, run_timestamp: str, dataframes: 
         return float(final_score)
 
     except Exception as e:
-        logging.error(f"Попытка {trial.number} не удалась для {symbol}: {str(e)}", exc_info=True)
+        logging.error(f"Trial {trial.number} failed for {symbol}: {str(e)}", exc_info=True)
         return float('-inf')
 
 
 def optimize_strategy(symbol: str, run_timestamp: str) -> Optional[tuple]:
     """
-    Оптимизация стратегии. Загружает данные ОДИН РАЗ перед запуском.
+    (EN) Optimizes the strategy. Loads data ONCE before starting.
+    (RU) Оптимизация стратегии. Загружает данные ОДИН РАЗ перед запуском.
     """
     try:
-        logging.info(f"Гриша начал свою работу для {symbol} с {OPTUNA_SETTINGS['n_trials']} попытками")
+        logging.info(f"Starting optimization for {symbol} with {OPTUNA_SETTINGS['n_trials']} trials")
 
-        logging.info(f"Предварительная загрузка данных для всех таймфреймов...")
-        timeframes_to_load = PARAM_GRID.get('timeframe', ['1h'])  # Получаем список таймфреймов из конфига
+        logging.info(f"Pre-loading data for all timeframes...")
+        timeframes_to_load = PARAM_GRID.get('timeframe', ['1h'])  # Получаем список таймфреймов из конфига/Get the list of timeframes from the config
         dataframes = {}
         for tf in timeframes_to_load:
             limit = max(PARAM_GRID.get('limit', [555000]))
@@ -315,10 +330,10 @@ def optimize_strategy(symbol: str, run_timestamp: str) -> Optional[tuple]:
             if df is not None and not df.empty:
                 dataframes[tf] = df
             else:
-                logging.warning(f"Не удалось загрузить данные для таймфрейма {tf}, он будет пропущен.")
+                logging.warning(f"Failed to load data for timeframe {tf}, it will be skipped.")
 
         if not dataframes:
-            logging.error(f"Не удалось загрузить данные ни для одного таймфрейма для символа {symbol}. Стоп.")
+            logging.error(f"Failed to load data for any timeframe for symbol {symbol}. Stopping.")
             return None
 
         study = optuna.create_study(
@@ -338,10 +353,10 @@ def optimize_strategy(symbol: str, run_timestamp: str) -> Optional[tuple]:
         )
 
         successful_trials = len([t for t in study.trials if t.value != float('-inf')])
-        logging.info(f"Оптимизация для {symbol}: {successful_trials}/{OPTUNA_SETTINGS['n_trials']} попыток успешны")
+        logging.info(f"Optimization for {symbol}: {successful_trials}/{OPTUNA_SETTINGS['n_trials']} trials were successful")
 
         if not study.best_trial or study.best_trial.value == float('-inf'):
-            logging.warning(f"Нет успешных попыток для {symbol}")
+            logging.warning(f"No successful trials for {symbol}")
             return None
 
         best_result = {
@@ -378,14 +393,14 @@ def optimize_strategy(symbol: str, run_timestamp: str) -> Optional[tuple]:
             trades_subdir = TRADES_DIR / timestamp
             trades_subdir.mkdir(parents=True, exist_ok=True)
 
-            # Сохранение сделок для train
+            # Сохранение сделок для train/Saving train trades
             train_trades_df = best_result['train_trades']
             train_filename = f"trades_{symbol.replace('/', '_')}_{trial_id}_train.csv"
             train_filepath = trades_subdir / train_filename
             train_trades_df.to_csv(train_filepath, index=False)
             logging.info(f"Best trial train trades ({len(train_trades_df)} total) saved to {train_filepath}")
 
-            # Сохранение сделок для test
+            # Сохранение сделок для test/Saving test trades
             test_trades_df = best_result['test_trades']
             test_filename = f"trades_{symbol.replace('/', '_')}_{trial_id}_test.csv"
             test_filepath = trades_subdir / test_filename
@@ -421,5 +436,5 @@ def optimize_strategy(symbol: str, run_timestamp: str) -> Optional[tuple]:
         return best_result, study
 
     except Exception as e:
-        logging.error(f"Оптимизация не удалась для {symbol}: {str(e)}", exc_info=True)
+        logging.error(f"Optimization failed for {symbol}: {str(e)}", exc_info=True)
         return None
