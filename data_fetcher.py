@@ -15,13 +15,19 @@ ccxt_logger.setLevel(logging.INFO)
 
 
 def _get_cache_key(symbol, timeframe, limit):
-    """Генерация ключа кеша"""
+    """
+    (EN) Generates a cache key for the given parameters.
+    (RU) Генерирует ключ кеша для заданных параметров.
+    """
     key = f"{symbol}_{timeframe}_{limit}_{DATA_DAYS_DEPTH}"
     return hashlib.md5(key.encode()).hexdigest() + ".feather"
 
 
 def _save_to_cache(df, cache_key):
-    """Векторное сохранение данных"""
+    """
+    (EN) Saves the DataFrame to a Feather format cache file.
+    (RU) Сохраняет DataFrame в файл кэша в формате Feather.
+    """
     cache_path = os.path.join(CACHE_DIR, cache_key)
     df.reset_index(inplace=True)
     df['_cache_timestamp'] = datetime.now()
@@ -30,11 +36,15 @@ def _save_to_cache(df, cache_key):
 
 def _load_from_cache(cache_key: str) -> Optional[DataFrame]:
     """
-        Векторная загрузка данных из кэша.
-
+        (EN) Loads data from the cache.
+        Args:
+            cache_key: Hash for the cache file.
+        Returns:
+            DataFrame with data or None if the cache is missing or expired.
+            
+        (RU) Векторная загрузка данных из кэша.
         Args:
             cache_key: Хэш для файла кэша.
-
         Returns:
             DataFrame с данными или None, если кэш отсутствует или устарел.
     """
@@ -60,7 +70,10 @@ def _load_from_cache(cache_key: str) -> Optional[DataFrame]:
 
 def clean_old_cache():
     """
-    Удаляет файлы кэша старше 7 дней.
+    (EN) Deletes cache files older than 7 days.
+    (Added just in case this function was missing)
+
+    (RU) Удаляет файлы кэша старше 7 дней.
     (Добавлено на случай, если этой функции не было)
     """
     if not os.path.exists(CACHE_DIR):
@@ -79,13 +92,19 @@ def clean_old_cache():
 
 def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
     """
-        Получение OHLCV-данных с кэшированием и фильтрацией выбросов.
-
+        (EN) Fetches OHLCV data with caching and outlier filtering.
+        Args:
+            symbol: Trading pair (e.g., 'BTC/USDT').
+            timeframe: Timeframe (e.g., '1h').
+            limit: Number of candles.
+        Returns:
+            DataFrame with columns ['open', 'high', 'low', 'close', 'volume'].
+            
+        (RU) Получение OHLCV-данных с кэшированием и фильтрацией выбросов.
         Args:
             symbol: Торговая пара (например, 'BTC/USDT').
             timeframe: Таймфрейм (например, '1h').
             limit: Количество свечей.
-
         Returns:
             DataFrame с колонками ['open', 'high', 'low', 'close', 'volume'].
     """
@@ -93,7 +112,7 @@ def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
 
     clean_old_cache()
 
-    # Проверка кеша
+    # Проверка кеша/Check cache
     cached_data = _load_from_cache(cache_key)
     if cached_data is not None:
         logging.info(f"Loaded {symbol} {timeframe} from cache: {cache_key}")
@@ -101,7 +120,7 @@ def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
 
     logging.info(f"Fetching {symbol} {timeframe} from Bybit, limit={limit}")
 
-    # Векторный запрос к API
+    # Векторный запрос к API/API Request
     exchange = ccxt.bybit({'enableRateLimit': True})
     since = exchange.parse8601((datetime.now() - timedelta(days=DATA_DAYS_DEPTH)).strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -111,9 +130,9 @@ def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
     if timeframe not in exchange.timeframes:
         raise ValueError(f"Timeframe {timeframe} not supported")
 
-    # Итеративный запрос данных
+    # Итеративный запрос данных/Iterative data fetching
     ohlcv = []
-    max_candles_per_request = 999  # Ограничение Bybit
+    max_candles_per_request = 999  # Ограничение Bybit/Bybit's limit
     candles_to_fetch = limit
     current_since = since
 
@@ -131,7 +150,7 @@ def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
             if len(data) == 0:
                 logging.info(f"No more data available for {symbol} {timeframe}")
                 break
-            current_since = int(data[-1][0]) + 1  # Следующая свеча после последней
+            current_since = int(data[-1][0]) + 1  # Следующая свеча после последней/Next candle after the last one
         except ccxt.BaseError as e:
             logging.error(f"Failed to fetch {symbol} {timeframe}: {str(e)}")
             raise
@@ -139,7 +158,7 @@ def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
     if not ohlcv:
         raise ValueError(f"No data fetched for {symbol} {timeframe}")
 
-    # Векторное преобразование
+    # Векторное преобразование/DataFrame conversion
     data = np.array(ohlcv)
     df = pd.DataFrame({
         'timestamp': pd.to_datetime(data[:, 0], unit='ms'),
@@ -150,12 +169,12 @@ def fetch_data(symbol: str, timeframe: str, limit: int) -> DataFrame:
         'volume': data[:, 5]
     }).set_index('timestamp')
 
-    # Удаляем дубликаты
+    # Удаляем дубликаты/Remove duplicates
     df = df[~df.index.duplicated(keep='first')]
 
-    # Фильтрация выбросов
+    # Фильтрация выбросов/Outlier filtering
     initial_rows = len(df)
-    df = df[df['close'].pct_change().abs() < 0.1]  # Удалить свечи с изменением >10%
+    df = df[df['close'].pct_change().abs() < 0.1]  # Удалить свечи с изменением >10%/Remove candles with >10% change
     filtered_rows = len(df)
     if initial_rows != filtered_rows:
         logging.warning(f"Filtered {initial_rows - filtered_rows} outlier candles for {symbol} {timeframe} (>10% price change)")
