@@ -16,7 +16,7 @@ LONG_PARAMS = {
     'aggressive_breakout_stop_multiplier': 1.46,
 
     # --- ПАРАМЕТРЫ "ЗАМКА НА ПРИБЫЛЬ"/"PROFIT LOCK" PARAMETERS ---
-    'profit_lock_trigger_pct': 0.032, # Если установить 0.0 - Замок выключится
+    'profit_lock_trigger_pct': 0.032, # Если установить 0.0 - Замок выключится/If you set 0.0, the lock will turn off
     'profit_lock_target_pct': 0.037,
 
     # === Трейлинг/Trailing  ===
