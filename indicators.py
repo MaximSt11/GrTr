@@ -7,7 +7,8 @@ import logging
 
 def add_indicators(df, params):
     """
-    Добавление только НЕОБХОДИМЫХ технических индикаторов в DataFrame.
+    (EN) Adds only the REQUIRED technical indicators to the DataFrame based on the provided params.
+    (RU) Добавление только НЕОБХОДИМЫХ технических индикаторов в DataFrame на основе переданных параметров.
     """
     try:
         df = df.copy()
@@ -17,19 +18,19 @@ def add_indicators(df, params):
 
         indicator_cols = []
 
-        # --- Рассчитываем только те индикаторы, для которых есть параметры ---
+        # --- Рассчитываем только те индикаторы, для которых есть параметры/Calculate only indicators for which parameters are provided ---
 
-        # Рассчитываем быструю EMA, если задан ее период. Это нужно для нашей новой шорт-стратегии.
+        # Рассчитываем быструю EMA, если задан ее период. Это нужно для нашей новой шорт-стратегии/Calculate fast EMA if its period is specified. This is needed for our new short strategy.
         if 'fast_ma' in params:
             df['ema_fast'] = EMAIndicator(df['close'], window=params['fast_ma'], fillna=True).ema_indicator()
             indicator_cols.append('ema_fast')
 
-        # Рассчитываем MACD и медленную EMA, только если заданы ОБА периода.
+        # Рассчитываем MACD и медленную EMA, только если заданы ОБА периода/Calculate MACD and slow EMA only if BOTH periods are specified.
         if 'fast_ma' in params and 'slow_ma' in params:
             df['ema_slow'] = EMAIndicator(df['close'], window=params['slow_ma'], fillna=True).ema_indicator()
             indicator_cols.append('ema_slow')
 
-            # Синхронизированный MACD
+            # Синхронизированный MACD/Synchronized MACD
             macd = MACD(df['close'], window_fast=params['fast_ma'], window_slow=params['slow_ma'], window_sign=9,
                         fillna=True)
             df['macd'] = macd.macd()
@@ -41,7 +42,7 @@ def add_indicators(df, params):
             df['rsi'] = RSIIndicator(df['close'], window=params['rsi_period'], fillna=True).rsi()
             indicator_cols.append('rsi')
 
-        # Расчет средней EMA для тренд-фильтра в скальпинге
+        # Расчет средней EMA для тренд-фильтра в скальпинге/Calculate medium EMA for the trend filter in scalping
         if 'medium_ema_period' in params:
             df['ema_medium'] = EMAIndicator(df['close'], window=params['medium_ema_period'],
                                             fillna=True).ema_indicator()
@@ -82,10 +83,10 @@ def add_indicators(df, params):
         if 'obv_period' in params:
             df['obv'] = OnBalanceVolumeIndicator(df['close'], df['volume'], fillna=True).on_balance_volume()
             df['obv_ma'] = EMAIndicator(df['obv'], window=params['obv_period'], fillna=True).ema_indicator()
-            indicator_cols.extend(['obv', 'obv_ma']) # Добавляем обе колонки
+            indicator_cols.extend(['obv', 'obv_ma']) # Добавляем обе колонки/Add both columns
 
         if 'swing_period' in params:
-            # Находим максимальный high за последние N свечей
+            # Находим максимальный high за последние N свечей/Find the maximum high over the last N candles
             df['swing_high'] = df['high'].rolling(window=params['swing_period']).max()
             indicator_cols.append('swing_high')
 
@@ -93,10 +94,10 @@ def add_indicators(df, params):
             df['ema_macro'] = EMAIndicator(df['close'], window=params['macro_ema_period'], fillna=True).ema_indicator()
             indicator_cols.append('ema_macro')
 
-        # Проверка данных
+        # Проверка данных/Data validation
         if not indicator_cols:
             logging.warning("No indicators were calculated based on the provided params.")
-            return df  # Возвращаем df как есть, если не было рассчитано ни одного индикатора
+            return df  # Возвращаем df как есть, если не было рассчитано ни одного индикатора/Return df as is if no indicators were calculated
 
 
         rows_before = len(df)
