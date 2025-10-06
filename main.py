@@ -41,7 +41,8 @@ if ENABLE_VISUALIZER or ENABLE_OPTUNA_PLOTS:
 
 def run_optimization(symbol: str, run_timestamp: str) -> Optional[Dict]:
     """
-    Запускает оптимизацию для одного символа через Optuna.
+    (EN) Runs the optimization for a single symbol using Optuna.
+    (RU) Запускает оптимизацию для одного символа через Optuna.
     """
     try:
         logging.info(f"\n{'=' * 40}\nGrisha starts optimizing {symbol} with Optuna\n{'=' * 40}")
@@ -74,7 +75,8 @@ def run_optimization(symbol: str, run_timestamp: str) -> Optional[Dict]:
 
 def run_fixed_params_test(symbol: str, params: Dict, run_timestamp: str) -> Optional[Dict]:
     """
-    Тестирование фиксированных параметров.
+    (EN) Runs a backtest using a fixed set of parameters.
+    (RU) Тестирование фиксированных параметров.
     """
     try:
         logging.info(f"\n{'=' * 40}\nRunning fixed params test for {symbol}\n{'=' * 40}")
@@ -82,11 +84,11 @@ def run_fixed_params_test(symbol: str, params: Dict, run_timestamp: str) -> Opti
         params = params.copy()
         params['symbol'] = symbol
         df = fetch_data(symbol, params['timeframe'], params['limit'])
-        tscv = TimeSeriesSplit(n_splits=5) # Количество фолдов
+        tscv = TimeSeriesSplit(n_splits=5) # Количество фолдов/Number of folds
         results = []
         for fold, (train_idx, test_idx) in enumerate(tscv.split(df)):
             total_size = len(train_idx) + len(test_idx)
-            train_size = int(total_size * 0.5) # Длина Тест/Трейн
+            train_size = int(total_size * 0.5) # Длина Тест/Трейн//Train/Test length
             if len(train_idx) < train_size:
                 train_size = len(train_idx)
             test_size = min(len(test_idx), total_size - train_size)
@@ -171,7 +173,7 @@ def main():
                      f"SuccessfulTrialsReport={ENABLE_SUCCESSFUL_TRIALS_REPORT}, Top5TrialsReport={ENABLE_TOP_5_TRIALS_REPORT}")
         fixed_results = {}
         optuna_results = {}
-        successful_trials_data = {}  # Для хранения данных успешных попыток по символам
+        successful_trials_data = {}  # Для хранения данных успешных попыток по символам/To store successful trial data by symbol
 
         if ENABLE_FIXED_PARAMS:
             for symbol in SYMBOLS:
@@ -192,10 +194,10 @@ def main():
                     result = optuna_result['result']
                     study = optuna_result['study']
                     optuna_results[symbol] = result
-                    # Сохраняем минимальный отчет
+                    # Сохраняем минимальный отчет/Save the minimal report
                     if study.best_trial:
                         save_minimal_results(result, symbol, trial_number=study.best_trial.number, study=study)
-                    # Собираем данные успешных попыток
+                    # Собираем данные успешных попыток/Collect data from successful trials
                     trials_data = []
                     for trial in study.trials:
                         if trial.value != float('-inf'):
@@ -220,7 +222,7 @@ def main():
                             }
                             trials_data.append(trial_data)
                     successful_trials_data[symbol] = trials_data
-                    # Сохраняем отчеты успешных и топ-5 попыток
+                    # Сохраняем отчеты успешных и топ-5 попыток/Save reports for successful and top-5 trials
                     save_successful_trials(trials_data, symbol)
                     save_top_5_trials(trials_data, symbol)
         else:
